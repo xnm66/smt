@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>电子元件换算工具</title>
+	<style>
+		* {
+			margin: 0;
+			padding: 0;
+			box-sizing: border-box;
+			font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+		}
+		
+		body {
+			background-color: #f5f7fa;
+			color: #333;
+			line-height: 1.5;
+			padding: 10px;
+			min-height: 100vh;
+		}
+		
+		.container {
+			max-width: 600px;
+			margin: 0 auto;
+			display: flex;
+			flex-direction: column;
+			gap: 10px;
+		}
+		
+		/* 顶部标签栏 */
+		.tabs {
+			display: flex;
+			background: white;
+			border-radius: 6px;
+			overflow: hidden;
+			border: 1px dashed #ddd;
+		}
+		
+		.tab {
+			flex: 1;
+			padding: 12px 8px;
+			text-align: center;
+			color: #2c3e50;
+			background: white;
+			border: none;
+			cursor: pointer;
+			font-size: 14px;
+			transition: all 0.2s;
+		}
+		
+		.tab.active {
+			background: #3498db;
+			color: white;
+			font-weight: bold;
+		}
+		
+		/* 内容区域 */
+		.content {
+			background: white;
+			padding: 15px;
+			border-radius: 6px;
+			border: 1px dashed #ddd;
+			min-height: 300px;
+		}
+		
+		/* 周天换算页特别调小 */
+		#weekday.content {
+			padding: 12px;
+			min-height: auto;
+		}
+		
+		.section-title {
+			color: #2c3e50;
+			margin-bottom: 15px;
+			font-size: 16px;
+			font-weight: bold;
+		}
+		
+		/* 周天换算页标题更小 */
+		#weekday .section-title {
+			margin-bottom: 10px;
+		}
+		
+		/* 周天换算结果 - 强制1×4布局，整体更紧凑 */
+		.weekday-row {
+			display: flex;
+			justify-content: space-between;
+			gap: 6px;
+			margin-top: 5px;
+			flex-wrap: nowrap;
+			overflow-x: auto;
+			padding-bottom: 3px;
+		}
+		
+		.weekday-row::-webkit-scrollbar {
+			display: none;
+		}
+		
+		.weekday-box {
+			min-width: 75px;
+			flex: 1;
+			border: 1px dashed #ddd;
+			border-radius: 6px;
+			padding: 10px 6px;
+			text-align: center;
+			display: flex;
+			flex-direction: column;
+			justify-content: center;
+			flex-shrink: 0;
+		}
+		
+		.weekday-label {
+			display: block;
+			margin-bottom: 4px;
+			font-weight: 500;
+			color: #2c3e50;
+			font-size: 12px;
+		}
+		
+		.weekday-value {
+			font-size: 20px;
+			font-weight: bold;
+			color: #333;
+		}
+		
+		/* 其他页面的正常大小 */
+		#multiplier.content,
+		#colorcode.content,
+		#voltage.content {
+			min-height: 400px;
+		}
+		
+		/* 色环计算器样式 - 调大字体和按钮 */
+		.color-band-selector {
+			display: flex;
+			justify-content: center;
+			gap: 12px;
+			margin: 20px 0;
+			flex-wrap: wrap;
+			min-height: 80px;
+		}
+		
+		.band-square {
+			width: 70px;
+			height: 70px;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			font-weight: bold;
+			transition: all 0.3s ease;
+			border: 2px solid white;
+			box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+			display: none;
+			border-radius: 8px;
+		}
+		
+		.band-square.visible {
+			display: flex;
+		}
+		
+		.band-name {
+			font-size: 13px;
+			margin-top: 4px;
+		}
+		
+		/* 颜色选择按钮 - 调大 */
+		.color-buttons {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 8px;
+			margin: 20px 0;
+			justify-content: center;
+		}
+		
+		.color-btn {
+			padding: 10px 14px;
+			border: 1px solid #ddd;
+			border-radius: 4px;
+			font-weight: bold;
+			cursor: pointer;
+			font-size: 13px;
+			min-width: 75px;
+		}
+		
+		/* 控制按钮 */
+		.control-buttons {
+			display: flex;
+			justify-content: center;
+			margin: 20px 0;
+		}
+		
+		.control-btn {
+			background: #e74c3c;
+			color: white;
+			border: none;
+			padding: 10px 20px;
+			border-radius: 6px;
+			cursor: pointer;
+			font-weight: bold;
+			font-size: 14px;
+			width: 100%;
+			max-width: 200px;
+		}
+		
+		.control-btn:hover {
+			background: #c0392b;
+		}
+		
+		/* 色环计算结果 - 1×2布局 */
+		.result-row {
+			display: none;
+			justify-content: space-between;
+			gap: 12px;
+			margin: 20px 0;
+			flex-wrap: nowrap;
+			overflow-x: auto;
+			padding-bottom: 5px;
+		}
+		
+		.result-row::-webkit-scrollbar {
+			display: none;
+		}
+		
+		.result-box {
+			min-width: 180px;
+			flex: 1;
+			border: 1px dashed #ddd;
+			border-radius: 6px;
+			padding: 15px 10px;
+			text-align: center;
+			display: flex;
+			flex-direction: column;
+			justify-content: center;
+			flex-shrink: 0;
+		}
+		
+		.result-label {
+			display: block;
+			margin-bottom: 8px;
+			font-weight: 500;
+			color: #2c3e50;
+			font-size: 14px;
+		}
+		
+		.result-value {
+			font-size: 20px;
+			font-weight: bold;
+			color: #333;
+		}
+		
+		/* 表格样式 - 修改：尺寸缩小，比字体大约3像素 */
+		.table-container {
+			overflow-x: auto;
+			margin-top: 15px;
+			border: 1px dashed #ddd;
+			border-radius: 6px;
+			padding: 1px;
+		}
+		
+		.simple-table {
+			width: 100%;
+			border-collapse: collapse;
+			font-size: 13px; /* 基准字体大小 */
+		}
+		
+		.simple-table th {
+			background: #f8f9fa;
+			color: #2c3e50;
+			padding: 6px 4px; /* 减小内边距，使表格更紧凑 */
+			text-align: center;
+			border: 1px solid #ddd;
+			font-weight: 600;
+			font-size: 12px;
+			height: 28px; /* 固定高度，比字体大3像素 */
+			line-height: 1.2;
+		}
+		
+		.simple-table td {
+			padding: 5px 3px; /* 减小内边距，使表格更紧凑 */
+			border: 1px solid #ddd;
+			text-align: center;
+			font-size: 12px;
+			height: 27px; /* 固定高度，比字体大3像素 */
+			line-height: 1.2;
+		}
+		
+		/* 代码列 - 白色背景 */
+		.simple-table td.code-cell {
+			background-color: white;
+			font-weight: bold;
+			color: #2c3e50;
+		}
+		
+		/* 数值列 - 浅蓝色背景 */
+		.simple-table td.value-cell {
+			background-color: #e8f4fc;
+			color: #2c3e50;
+		}
+		
+		/* 行交替颜色 */
+		.simple-table tr:nth-child(even) td.code-cell {
+			background-color: #f8f9fa;
+		}
+		
+		.simple-table tr:nth-child(even) td.value-cell {
+			background-color: #d4eaf7;
+		}
+		
+		/* 电压代码样式 */
+		.voltage-grid {
+			display: grid;
+			grid-template-columns: repeat(4, 1fr);
+			gap: 12px;
+			margin-top: 15px;
+		}
+		
+		.voltage-item {
+			border: 1px dashed #ddd;
+			border-radius: 6px;
+			padding: 15px 10px;
+			text-align: center;
+		}
+		
+		.voltage-code {
+			font-weight: bold;
+			color: #2c3e50;
+			font-size: 20px;
+			margin-bottom: 5px;
+		}
+		
+		.voltage-value {
+			color: #333;
+			font-size: 14px;
+		}
+		
+		/* 倍数代码表样式 - 修改：尺寸缩小，比字体大约3像素 */
+		.code-table-container {
+			margin-top: 20px;
+			border: 1px dashed #ddd;
+			border-radius: 6px;
+			padding: 1px;
+		}
+		
+		.code-table {
+			width: 100%;
+			border-collapse: collapse;
+			font-size: 13px; /* 基准字体大小 */
+		}
+		
+		.code-table th {
+			background: #f8f9fa;
+			color: #2c3e50;
+			padding: 6px 4px; /* 减小内边距 */
+			text-align: center;
+			border: 1px solid #ddd;
+			font-weight: 600;
+			font-size: 12px;
+			height: 28px; /* 固定高度，比字体大3像素 */
+			line-height: 1.2;
+		}
+		
+		.code-table td {
+			padding: 6px 4px; /* 减小内边距 */
+			border: 1px solid #ddd;
+			text-align: center;
+			font-size: 12px;
+			height: 27px; /* 固定高度，比字体大3像素 */
+			line-height: 1.2;
+		}
+		
+		/* 隐藏/显示控制 */
+		.hidden {
+			display: none;
+		}
+		
+		/* 提示信息 */
+		.info-text {
+			font-size: 12px;
+			color: #7f8c8d;
+			margin-top: 10px;
+			text-align: center;
+		}
+		
+		/* 已选色环信息 */
+		.selected-info {
+			text-align: center;
+			margin: 15px 0;
+			font-weight: bold;
+			color: #2c3e50;
+			font-size: 15px;
+		}
+		
+		/* 响应式 */
+		@media (max-width: 768px) {
+			#weekday.content {
+				padding: 10px;
+			}
+			
+			.weekday-box {
+				min-width: 70px;
+				padding: 8px 5px;
+			}
+			
+			.weekday-value {
+				font-size: 18px;
+			}
+			
+			.weekday-label {
+				font-size: 11px;
+			}
+			
+			.band-square {
+				width: 65px;
+				height: 65px;
+			}
+			
+			.color-btn {
+				min-width: 70px;
+				font-size: 12px;
+				padding: 9px 12px;
+			}
+			
+			.result-box {
+				min-width: 150px;
+			}
+			
+			.simple-table, .code-table {
+				font-size: 12px; /* 移动端字体 */
+			}
+			
+			.simple-table th, .simple-table td,
+			.code-table th, .code-table td {
+				padding: 4px 3px; /* 移动端更紧凑 */
+				height: 25px; /* 移动端高度调整 */
+			}
+			
+			.simple-table th {
+				height: 26px; /* 移动端表头高度调整 */
+			}
+			
+			.code-table th {
+				height: 26px; /* 移动端表头高度调整 */
+			}
+		}
+		
+		@media (max-width: 480px) {
+			#weekday.content {
+				padding: 8px;
+			}
+			
+			.section-title {
+				font-size: 14px;
+				margin-bottom: 8px;
+			}
+			
+			#weekday .section-title {
+				margin-bottom: 6px;
+			}
+			
+			.weekday-box {
+				min-width: 65px;
+				padding: 8px 4px;
+			}
+			
+			.weekday-value {
+				font-size: 16px;
+			}
+			
+			.weekday-label {
+				font-size: 10px;
+				margin-bottom: 3px;
+			}
+			
+			.voltage-grid {
+				grid-template-columns: repeat(2, 1fr);
+			}
+			
+			.band-square {
+				width: 60px;
+				height: 60px;
+			}
+			
+			.color-btn {
+				min-width: 65px;
+				font-size: 11px;
+				padding: 8px 10px;
+			}
+			
+			.result-box {
+				min-width: 140px;
+				padding: 12px 8px;
+			}
+			
+			.simple-table, .code-table {
+				font-size: 11px; /* 小屏幕字体 */
+			}
+			
+			.simple-table th, .simple-table td,
+			.code-table th, .code-table td {
+				padding: 3px 2px; /* 小屏幕更紧凑 */
+				height: 22px; /* 小屏幕高度调整 */
+				font-size: 10px;
+			}
+			
+			.simple-table th {
+				height: 23px; /* 小屏幕表头高度调整 */
+				font-size: 10px;
+			}
+			
+			.code-table th {
+				height: 23px; /* 小屏幕表头高度调整 */
+				font-size: 10px;
+			}
+		}
+		
+		@media (max-width: 360px) {
+			.tab {
+				padding: 10px 6px;
+				font-size: 12px;
+			}
+			
+			#weekday.content {
+				padding: 6px;
+			}
+			
+			.weekday-box {
+				min-width: 60px;
+				padding: 6px 3px;
+			}
+			
+			.weekday-value {
+				font-size: 15px;
+			}
+			
+			.weekday-label {
+				font-size: 9px;
+				margin-bottom: 2px;
+			}
+			
+			.band-square {
+				width: 55px;
+				height: 55px;
+			}
+			
+			.color-btn {
+				min-width: 60px;
+				font-size: 10px;
+				padding: 7px 9px;
+			}
+			
+			.result-box {
+				min-width: 130px;
+				padding: 10px 6px;
+			}
+			
+			.simple-table, .code-table {
+				font-size: 10px; /* 超小屏幕字体 */
+			}
+			
+			.simple-table th, .simple-table td,
+			.code-table th, .code-table td {
+				padding: 2px 1px; /* 超小屏幕更紧凑 */
+				height: 20px; /* 超小屏幕高度调整 */
+				font-size: 9px;
+			}
+			
+			.simple-table th {
+				height: 21px; /* 超小屏幕表头高度调整 */
+				font-size: 9px;
+			}
+			
+			.code-table th {
+				height: 21px; /* 超小屏幕表头高度调整 */
+				font-size: 9px;
+			}
+		}
+	</style>
+</head>
+<body>
+	<div class="container">
+		<!-- 顶部标签栏 -->
+		<div class="tabs">
+			<button class="tab active" onclick="switchTab('weekday')">周天换算</button>
+			<button class="tab" onclick="switchTab('multiplier')">倍数表</button>
+			<button class="tab" onclick="switchTab('colorcode')">色环计算</button>
+			<button class="tab" onclick="switchTab('voltage')">电压代码</button>
+		</div>
+		
+		<!-- 周天换算 -->
+		<div id="weekday" class="content">
+			<div class="section-title">📅 周天自动换算</div>
+			<div class="weekday-row">
+				<div class="weekday-box">
+					<span class="weekday-label">年</span>
+					<div class="weekday-value" id="year-value">25</div>
+				</div>
+				<div class="weekday-box">
+					<span class="weekday-label">周</span>
+					<div class="weekday-value" id="week-value">50</div>
+				</div>
+				<div class="weekday-box">
+					<span class="weekday-label">天</span>
+					<div class="weekday-value" id="day-value">347</div>
+				</div>
+				<div class="weekday-box">
+					<span class="weekday-label">本周第几天</span>
+					<div class="weekday-value" id="weekday-value">6</div>
+				</div>
+			</div>
+		</div>
+		
+		<!-- 倍数表 -->
+		<div id="multiplier" class="content hidden">
+			<div class="section-title">📊 E96系列电阻代码表</div>
+			<div class="table-container">
+				<table class="simple-table">
+					<thead>
+						<tr>
+							<th>代码</th><th>数值</th>
+							<th>代码</th><th>数值</th>
+							<th>代码</th><th>数值</th>
+							<th>代码</th><th>数值</th>
+						</tr>
+					</thead>
+					<tbody id="multiplier-table"></tbody>
+				</table>
+			</div>
+			<div class="code-table-container">
+				<div class="section-title">📋 倍数代码对应表</div>
+				<table class="code-table">
+					<thead>
+						<tr>
+							<th>代码</th><th>A</th><th>B</th><th>C</th><th>D</th><th>E</th><th>X</th><th>Y</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr>
+							<td><strong>倍数</strong></td>
+							<td>0</td>
+							<td>1</td>
+							<td>2</td>
+							<td>3</td>
+							<td>4</td>
+							<td>-1</td>
+							<td>-2</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+		</div>
+		
+		<!-- 色环计算 -->
+		<div id="colorcode" class="content hidden">
+			<div class="section-title">🌈 色环电阻计算器</div>
+			<div class="selected-info" id="selected-info">已选择：0个色环 (最少3个开始计算)</div>
+			<div class="color-band-selector" id="band-display"></div>
+			<div class="color-buttons" id="color-buttons"></div>
+			
+			<!-- 计算结果 - 1×2布局 -->
+			<div class="result-row" id="result-display">
+				<div class="result-box">
+					<span class="result-label">电阻值</span>
+					<div class="result-value" id="resistor-value">-</div>
+				</div>
+				<div class="result-box">
+					<span class="result-label">容差</span>
+					<div class="result-value" id="tolerance-value">-</div>
+				</div>
+			</div>
+			
+			<div class="control-buttons">
+				<button class="control-btn" onclick="clearAllBands()">清除所有色环</button>
+			</div>
+			<div class="info-text">直接点击颜色按钮设置色环<br>点击3个色环开始计算，最多5个色环</div>
+		</div>
+		
+		<!-- 电压代码 -->
+		<div id="voltage" class="content hidden">
+			<div class="section-title">⚡ 电压代码对照表</div>
+			<div class="voltage-grid">
+				<div class="voltage-item"><div class="voltage-code">A</div><div class="voltage-value">10V</div></div>
+				<div class="voltage-item"><div class="voltage-code">D</div><div class="voltage-value">20V</div></div>
+				<div class="voltage-item"><div class="voltage-code">J</div><div class="voltage-value">6.3V</div></div>
+				<div class="voltage-item"><div class="voltage-code">E</div><div class="voltage-value">25V</div></div>
+				<div class="voltage-item"><div class="voltage-code">G</div><div class="voltage-value">4V</div></div>
+				<div class="voltage-item"><div class="voltage-code">H</div><div class="voltage-value">50V</div></div>
+				<div class="voltage-item"><div class="voltage-code">V</div><div class="voltage-value">35V</div></div>
+				<div class="voltage-item"><div class="voltage-code">C</div><div class="voltage-value">16V</div></div>
+			</div>
+		</div>
+	</div>
+
+	<script>
+		// 页面初始化
+		document.addEventListener('DOMContentLoaded', initPage);
+		
+		// 初始化页面
+		function initPage() {
+			initWeekday();
+			initMultiplierTable();
+			initColorResistor();
+			switchToTab('weekday');
+		}
+		
+		// 标签切换
+		function switchTab(tabName) {
+			switchToTab(tabName);
+		}
+		
+		function switchToTab(tabName) {
+			document.querySelectorAll('.content').forEach(content => content.classList.add('hidden'));
+			document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+			document.getElementById(tabName).classList.remove('hidden');
+			document.querySelector(`.tab[onclick="switchTab('${tabName}')"]`).classList.add('active');
+		}
+		
+		// 初始化周天换算
+		function initWeekday() {
+			const now = new Date();
+			const fullYear = now.getFullYear();
+			const yearLastTwo = fullYear.toString().slice(-2);
+			
+			// 计算一年中的第几天
+			const start = new Date(fullYear, 0, 0);
+			const dayOfYear = Math.floor((now - start) / (1000 * 60 * 60 * 24));
+			
+			// 计算ISO周数
+			const weekNumber = getISOWeek(now);
+			
+			// 计算本周第几天（1=星期一，7=星期日）
+			let dayOfWeek = now.getDay();
+			dayOfWeek = dayOfWeek === 0 ? 7 : dayOfWeek;
+			
+			// 更新显示
+			document.getElementById('year-value').textContent = yearLastTwo;
+			document.getElementById('week-value').textContent = weekNumber;
+			document.getElementById('day-value').textContent = dayOfYear;
+			document.getElementById('weekday-value').textContent = dayOfWeek;
+		}
+		
+		// 获取ISO周数
+		function getISOWeek(date) {
+			const target = new Date(date.valueOf());
+			const dayNr = (date.getDay() + 6) % 7;
+			target.setDate(target.getDate() - dayNr + 3);
+			const firstThursday = target.valueOf();
+			target.setMonth(0, 1);
+			if (target.getDay() !== 4) {
+				target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
+			}
+			return 1 + Math.ceil((firstThursday - target) / 604800000);
+		}
+		
+		// 初始化倍数表 - 修改后版本
+		function initMultiplierTable() {
+			const table = document.getElementById('multiplier-table');
+			const data = [
+				[1, 100, 25, 178, 49, 316, 73, 562],
+				[2, 102, 26, 182, 50, 324, 74, 576],
+				[3, 105, 27, 187, 51, 332, 75, 590],
+				[4, 107, 28, 191, 52, 340, 76, 604],
+				[5, 110, 29, 196, 53, 348, 77, 619],
+				[6, 113, 30, 200, 54, 357, 78, 634],
+				[7, 115, 31, 205, 55, 365, 79, 649],
+				[8, 118, 32, 210, 56, 374, 80, 665],
+				[9, 121, 33, 215, 57, 383, 81, 681],
+				[10, 124, 34, 221, 58, 392, 82, 698],
+				[11, 127, 35, 226, 59, 402, 83, 715],
+				[12, 130, 36, 232, 60, 412, 84, 732],
+				[13, 133, 37, 237, 61, 422, 85, 750],
+				[14, 137, 38, 243, 62, 432, 86, 768],
+				[15, 140, 39, 249, 63, 442, 87, 787],
+				[16, 143, 40, 255, 64, 453, 88, 806],
+				[17, 147, 41, 261, 65, 464, 89, 825],
+				[18, 150, 42, 267, 66, 475, 90, 845],
+				[19, 154, 43, 274, 67, 487, 91, 866],
+				[20, 158, 44, 280, 68, 499, 92, 887],
+				[21, 162, 45, 287, 69, 511, 93, 909],
+				[22, 165, 46, 294, 70, 523, 94, 931],
+				[23, 169, 47, 301, 71, 536, 95, 953],
+				[24, 174, 48, 309, 72, 549, 96, 976]
+			];
+			
+			data.forEach(row => {
+				const tr = document.createElement('tr');
+				row.forEach((cell, index) => {
+					const td = document.createElement('td');
+					// 代码列（索引为偶数）：1-9前面加0
+					if (index % 2 === 0) {
+						// 将1-9转换为01-09
+						td.textContent = cell < 10 ? '0' + cell : cell;
+					} else {
+						td.textContent = cell;
+					}
+					td.className = index % 2 === 0 ? 'code-cell' : 'value-cell';
+					tr.appendChild(td);
+				});
+				table.appendChild(tr);
+			});
+		}
+		
+		// 色环电阻数据
+		const colorData = [
+			{name: "黑(0)", value: 0, multiplier: 1, tolerance: null, color: "#000000", textColor: "white"},
+			{name: "棕(1)", value: 1, multiplier: 10, tolerance: 1, color: "#8B4513", textColor: "white"},
+			{name: "红(2)", value: 2, multiplier: 100, tolerance: 2, color: "#FF0000", textColor: "white"},
+			{name: "橙(3)", value: 3, multiplier: 1000, tolerance: null, color: "#FFA500", textColor: "black"},
+			{name: "黄(4)", value: 4, multiplier: 10000, tolerance: null, color: "#FFFF00", textColor: "black"},
+			{name: "绿(5)", value: 5, multiplier: 100000, tolerance: 0.5, color: "#008000", textColor: "white"},
+			{name: "蓝(6)", value: 6, multiplier: 1000000, tolerance: 0.25, color: "#0000FF", textColor: "white"},
+			{name: "紫(7)", value: 7, multiplier: 10000000, tolerance: 0.1, color: "#800080", textColor: "white"},
+			{name: "灰(8)", value: 8, multiplier: 100000000, tolerance: 0.05, color: "#808080", textColor: "white"},
+			{name: "白(9)", value: 9, multiplier: 1000000000, tolerance: null, color: "#FFFFFF", textColor: "black"},
+			{name: "金(-1)", value: -1, multiplier: 0.1, tolerance: 5, color: "#FFD700", textColor: "black"},
+			{name: "银(-2)", value: -2, multiplier: 0.01, tolerance: 10, color: "#C0C0C0", textColor: "black"}
+		];
+		
+		// 当前选择的色环
+		let selectedBands = [];
+		
+		// 初始化色环计算器
+		function initColorResistor() {
+			generateColorButtons();
+		}
+		
+		// 生成颜色按钮
+		function generateColorButtons() {
+			const container = document.getElementById('color-buttons');
+			colorData.forEach((color, index) => {
+				const btn = document.createElement('button');
+				btn.className = 'color-btn';
+				btn.style.backgroundColor = color.color;
+				btn.style.color = color.textColor;
+				btn.style.border = color.name.includes('白') ? '1px solid #ccc' : 'none';
+				btn.textContent = color.name;
+				btn.onclick = () => addBandColor(index);
+				container.appendChild(btn);
+			});
+		}
+		
+		// 添加色环颜色
+		function addBandColor(colorIndex) {
+			if (selectedBands.length >= 5) return;
+			selectedBands.push(colorIndex);
+			updateBandDisplay();
+			calculateResistor();
+		}
+		
+		// 清除所有色环
+		function clearAllBands() {
+			selectedBands = [];
+			updateBandDisplay();
+			calculateResistor();
+		}
+		
+		// 更新色环显示
+		function updateBandDisplay() {
+			const display = document.getElementById('band-display');
+			display.innerHTML = '';
+			
+			document.getElementById('selected-info').textContent = 
+				`已选择：${selectedBands.length}个色环 (最少3个开始计算)`;
+			
+			if (selectedBands.length > 0) {
+				selectedBands.forEach((bandIndex, i) => {
+					const color = colorData[bandIndex];
+					const band = document.createElement('div');
+					band.className = 'band-square visible';
+					band.style.backgroundColor = color.color;
+					band.style.color = color.textColor;
+					
+					// 设置显示内容
+					if ((selectedBands.length === 3 && i === 2) || 
+						(selectedBands.length === 4 && i === 3) || 
+						(selectedBands.length === 5 && i === 4)) {
+						// 容差或乘数位
+						const isTolerance = selectedBands.length >= 4 && 
+										   ((selectedBands.length === 4 && i === 3) || 
+											(selectedBands.length === 5 && i === 4));
+						const displayText = isTolerance ? 
+							(color.tolerance ? '±' + color.tolerance + '%' : '-') : 
+							getMultiplierText(color.multiplier);
+						band.innerHTML = `<div>${displayText}</div><div class="band-name">${color.name.split('(')[0]}</div>`;
+					} else {
+						// 数字位
+						const displayName = color.name.split('(')[0];
+						band.innerHTML = `<div>${color.value !== null ? color.value : '-'}</div><div class="band-name">${displayName}</div>`;
+					}
+					
+					display.appendChild(band);
+				});
+			}
+		}
+		
+		// 获取乘数文本
+		function getMultiplierText(multiplier) {
+			if (multiplier >= 1000000) return '×' + (multiplier / 1000000) + 'M';
+			if (multiplier >= 1000) return '×' + (multiplier / 1000) + 'K';
+			if (multiplier < 1) return '×' + multiplier;
+			return '×' + multiplier;
+		}
+		
+		// 计算电阻值
+		function calculateResistor() {
+			const resultDisplay = document.getElementById('result-display');
+			
+			if (selectedBands.length >= 3) {
+				let baseValue = 0;
+				let multiplier = 1;
+				let tolerance = null;
+				
+				if (selectedBands.length === 3) {
+					// 3色环：第1位×10^第2位 (第3位是乘数，无容差)
+					const firstDigit = colorData[selectedBands[0]].value;
+					const secondDigit = colorData[selectedBands[1]].value;
+					const multiplierColor = colorData[selectedBands[2]];
+					
+					if (firstDigit === null || secondDigit === null) return;
+					
+					baseValue = firstDigit * 10 + secondDigit;
+					multiplier = multiplierColor.multiplier;
+					
+				} else if (selectedBands.length === 4) {
+					// 4色环：前两位×10^第3位，第4位容差
+					const firstDigit = colorData[selectedBands[0]].value;
+					const secondDigit = colorData[selectedBands[1]].value;
+					const multiplierColor = colorData[selectedBands[2]];
+					const toleranceColor = colorData[selectedBands[3]];
+					
+					if (firstDigit === null || secondDigit === null) return;
+					
+					baseValue = firstDigit * 10 + secondDigit;
+					multiplier = multiplierColor.multiplier;
+					tolerance = toleranceColor.tolerance;
+					
+				} else if (selectedBands.length === 5) {
+					// 5色环：前三位×10^第4位，第5位容差
+					const firstDigit = colorData[selectedBands[0]].value;
+					const secondDigit = colorData[selectedBands[1]].value;
+					const thirdDigit = colorData[selectedBands[2]].value;
+					const multiplierColor = colorData[selectedBands[3]];
+					const toleranceColor = colorData[selectedBands[4]];
+					
+					if (firstDigit === null || secondDigit === null || thirdDigit === null) return;
+					
+					baseValue = firstDigit * 100 + secondDigit * 10 + thirdDigit;
+					multiplier = multiplierColor.multiplier;
+					tolerance = toleranceColor.tolerance;
+				}
+				
+				// 计算并格式化电阻值
+				let resistance = baseValue * multiplier;
+				let formattedResistance;
+				
+				if (resistance >= 1000000) {
+					formattedResistance = (resistance / 1000000).toFixed(3) + ' MΩ';
+				} else if (resistance >= 1000) {
+					formattedResistance = (resistance / 1000).toFixed(2) + ' KΩ';
+				} else {
+					formattedResistance = resistance.toFixed(1) + ' Ω';
+				}
+				
+				// 显示结果区域
+				resultDisplay.style.display = 'flex';
+				
+				// 更新显示
+				document.getElementById('resistor-value').textContent = formattedResistance;
+				document.getElementById('tolerance-value').textContent = tolerance ? '±' + tolerance + '%' : '-';
+			} else {
+				// 隐藏结果区域
+				resultDisplay.style.display = 'none';
+			}
+		}
+	</script>
+</body>
+</html>
